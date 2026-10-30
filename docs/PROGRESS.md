@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 4: Uzbek/Russian localization and current-screen polish.
+Phase 5: CRM behavior and role verification (blocked pending source of truth).
 
 ## Completed
 
@@ -38,25 +38,33 @@ Phase 4: Uzbek/Russian localization and current-screen polish.
   Compose health and proxy behavior, and a clean isolated Compose project with
   temporary credentials; cleaned the isolated containers, volumes, network,
   and environment file afterward.
+- Phase 4 installed i18next/react-i18next and routed existing login, dashboard,
+  role-label, session-loading, and login-error copy through Uzbek/Russian
+  translations. Uzbek is the default; Russian is selected for Russian browser
+  language settings. No language switcher was added without the missing UX spec.
+- Removed the dashboard's “STEP 1” placeholder and added accessible names to
+  the logout control and session-loading indicator.
+- Playwright verified Uzbek and Russian login screens and a localized invalid
+  login response; no failed requests or JavaScript page errors were observed.
 
 ## In progress
 
-- Localize all existing frontend user-facing copy for Uzbek and Russian and
-  polish only the currently implemented login/dashboard screens.
-- Keep the required `backend/` and `frontend/` top-level layout and workspace
-  fail-closed behavior verified.
+- Product implementation and role-based browser verification are blocked until
+  the approved product sources and account provisioning process are supplied.
 
 ## Next
 
-- Restore the missing spec and decisions before implementing CRM functionality,
-  target-role policy, or unapproved designs.
+- Once unblocked, implement the exact spec FRs, server-side role policies,
+  tenancy tests, and approved UI; continue deployment hardening and handover
+  verification.
 
 ## Known issues / blockers
 
 - See [AUDIT.md](./AUDIT.md), especially findings 1, 2, and 4.
 - Role-specific browser verification is not currently possible without approved
   operator and sales-head accounts.
-- Current Docker services are running from the baseline Compose setup.
+- The current Compose stack uses the production Nginx frontend; the isolated
+  fresh-install stack was removed after verification.
 
 ## Verification log
 
@@ -81,3 +89,6 @@ Phase 4: Uzbek/Russian localization and current-screen polish.
 - Fresh-project check: initial command attempted unavailable `python`; retry
   with installed `python3` succeeded. Temporary credentials and resources were
   removed.
+- Phase 4 frontend build/typecheck and lint passed; backend build/lint/unit/e2e
+  tests passed. Browser verified Uzbek and Russian login copy and localized
+  invalid-credentials feedback.

@@ -2,10 +2,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { authService } from '../lib/auth.service';
 import { isAxiosError } from 'axios';
+import { useTranslation } from 'react-i18next';
 
 export function useAuth() {
   const { user, isAuthenticated, isLoading, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const login = async (
     email: string,
@@ -17,16 +19,11 @@ export function useAuth() {
       navigate('/dashboard');
       return { success: true };
     } catch (error: unknown) {
-      const responseMessage = isAxiosError<{ message?: unknown }>(error)
-        ? error.response?.data?.message
-        : undefined;
-
       return {
         success: false,
-        error:
-          typeof responseMessage === 'string'
-            ? responseMessage
-            : 'Login failed',
+        error: isAxiosError(error) && !error.response
+          ? t('auth.networkError')
+          : t('auth.loginFailed'),
       };
     }
   };
@@ -34,8 +31,11 @@ export function useAuth() {
   const handleLogout = async () => {
     try {
       await authService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch (error: unknown) {
+      const status = isAxiosError(error)
+        ? error.response?.status ?? 'network error'
+        : 'unexpected error';
+      console.error('Logout request failed:', status);
     } finally {
       logout();
       navigate('/login');

@@ -11,7 +11,7 @@ Loyihada **M0 texnik poydevori** bilan birga dastlabki autentifikatsiya va works
 | Qatlam | Texnologiya |
 |---|---|
 | Backend | NestJS 11, TypeScript (strict), Node.js 22, Mongoose, `@nestjs/config`, Joi |
-| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`), oxlint |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`), i18next, oxlint |
 | Ma'lumotlar bazasi | MongoDB 7 (autentifikatsiya yoqilgan) |
 | Kesh infratuzilmasi | Redis 7 Alpine (parol bilan, AOF persistence) |
 | Infratuzilma | Docker, Docker Compose, Nginx (production frontend and `/api` reverse proxy) |
@@ -90,6 +90,8 @@ Muhim eslatmalar:
 - Frontend API so'rovlarini standart holatda `/api` orqali yuboradi. Compose'da
   Nginx shu yo'lni backend'ga proxy qiladi; host development'da Vite proxy
   ishlatiladi.
+- Interfeys rus tilidagi brauzer sozlamasida ruscha, boshqa holatlarda o'zbekcha
+  ko'rsatiladi; tasdiqlangan dizayn/spec kelmagani uchun til tanlagich qo'shilmadi.
 
 ## Loyihani ishga tushirish
 
