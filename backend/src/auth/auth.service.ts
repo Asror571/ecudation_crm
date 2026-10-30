@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import type { UserDocument } from '../users/schemas/user.schema';
-import type { SignOptions } from 'jsonwebtoken';
+import { JsonWebTokenError, type SignOptions } from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -35,11 +35,15 @@ export class AuthService {
     }
 
     const userId = user._id.toString();
-    await this.usersService.updateLastLogin(userId);
+    await this.usersService.updateLastLogin(userId, user.workspaceId);
 
     const tokens = this.generateTokens(user);
 
-    await this.usersService.updateRefreshToken(userId, tokens.refreshToken);
+    await this.usersService.updateRefreshToken(
+      userId,
+      user.workspaceId,
+      tokens.refreshToken,
+    );
 
     return {
       user: {
@@ -56,37 +60,58 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string) {
+    let payload: { sub?: unknown; workspaceId?: unknown };
     try {
-      const payload = this.jwtService.verify<{ sub: string }>(refreshToken, {
+      payload = this.jwtService.verify<{
+        sub?: unknown;
+        workspaceId?: unknown;
+      }>(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-
-      const user = await this.usersService.findById(payload.sub);
-
-      if (!user || user.refreshToken !== refreshToken) {
+    } catch (error) {
+      if (error instanceof JsonWebTokenError) {
         throw new UnauthorizedException('Invalid refresh token');
       }
+      throw error;
+    }
 
-      const tokens = this.generateTokens(user);
-
-      const userId = user._id.toString();
-      await this.usersService.updateRefreshToken(userId, tokens.refreshToken);
-
-      return {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      };
-    } catch {
+    if (
+      typeof payload.sub !== 'string' ||
+      typeof payload.workspaceId !== 'string'
+    ) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+
+    const user = await this.usersService.findById(
+      payload.sub,
+      payload.workspaceId,
+    );
+
+    if (!user || user.refreshToken !== refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const tokens = this.generateTokens(user);
+
+    const userId = user._id.toString();
+    await this.usersService.updateRefreshToken(
+      userId,
+      user.workspaceId,
+      tokens.refreshToken,
+    );
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
-  async logout(userId: string) {
-    await this.usersService.removeRefreshToken(userId);
+  async logout(userId: string, workspaceId: string) {
+    await this.usersService.removeRefreshToken(userId, workspaceId);
   }
 
-  async me(userId: string) {
-    const user = await this.usersService.findById(userId);
+  async me(userId: string, workspaceId: string) {
+    const user = await this.usersService.findById(userId, workspaceId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }

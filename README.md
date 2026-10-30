@@ -1,21 +1,21 @@
-# Education CRM
+# UzbekCRM
 
 ## Loyiha haqida
 
-**Education CRM** — o'quv markazlari uchun mo'ljallangan, kelajakda ko'p tenantli (multi-tenant) SaaS CRM platformasi. Platforma keyinchalik o'quv markazlariga talabalar, o'qituvchilar, kurslar, guruhlar, davomat va to'lovlarni boshqarishda yordam beradi.
+**UzbekCRM** — o'quv markazlari uchun ko'p tenantli (multi-tenant) SaaS CRM platformasi.
 
 Loyihada **M0 texnik poydevori** bilan birga dastlabki autentifikatsiya va workspace modullari mavjud. Backend login, token yangilash, logout va joriy foydalanuvchini olish endpointlarini taqdim etadi; to'liq CRM CRUD modullari hali ishlab chiqilmoqda.
 
 ## Texnologiyalar
 
-| Qatlam | Texnologiya |
-|---|---|
-| Backend | NestJS 11, TypeScript (strict), Node.js 22, Mongoose, `@nestjs/config`, Joi |
-| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`), i18next, oxlint |
-| Ma'lumotlar bazasi | MongoDB 7 (autentifikatsiya yoqilgan) |
-| Kesh infratuzilmasi | Redis 7 Alpine (parol bilan, AOF persistence) |
-| Infratuzilma | Docker, Docker Compose, Nginx (production frontend and `/api` reverse proxy) |
-| Paket menejeri | npm (lockfile'lar repoda saqlanadi) |
+| Qatlam              | Texnologiya                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| Backend             | NestJS 11, TypeScript (strict), Node.js 22, Mongoose, `@nestjs/config`, Joi          |
+| Frontend            | React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`), i18next, oxlint |
+| Ma'lumotlar bazasi  | MongoDB 7 (auth yoqilgan, bir tugunli `rs0` replica set)                             |
+| Kesh infratuzilmasi | Redis 7 Alpine (parol bilan, AOF persistence)                                        |
+| Infratuzilma        | Docker, Docker Compose, Nginx (production frontend and `/api` reverse proxy)         |
+| Paket menejeri      | npm (lockfile'lar repoda saqlanadi)                                                  |
 
 > Redis M0 bosqichida faqat infratuzilma sifatida ishga tushiriladi. Backend hozircha Redis'ga ulanmaydi, shuning uchun frontend Redis holatini ko'rsatmaydi.
 
@@ -27,6 +27,7 @@ education-crm/
 │   ├── src/                            # auth, users, workspaces, health
 │   ├── test/
 │   ├── Dockerfile
+│   ├── README.md
 │   ├── package.json
 │   └── package-lock.json
 ├── frontend/
@@ -34,10 +35,17 @@ education-crm/
 │   ├── src/                            # React application
 │   ├── nginx.conf                      # Static serving and backend reverse proxy
 │   ├── Dockerfile
+│   ├── README.md
 │   ├── package.json
 │   └── package-lock.json
 ├── docs/
+│   ├── TZ.md
+│   ├── AUDIT.md
+│   ├── PROGRESS.md
+│   └── SUGGESTIONS.md
+├── deploy/
 ├── .github/workflows/ci.yml
+├── DECISIONS.md
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
@@ -86,12 +94,14 @@ Muhim eslatmalar:
   firewall bilan cheklangan tarmoqda qo'llang.
 - `MONGO_URI` ichidagi login/parolda URL uchun maxsus belgilar (`@ : / ? # [ ] %` va h.k.) bo'lsa, ular **percent-encode** qilinishi shart (masalan, `@` → `%40`).
 - Docker Compose `MONGO_URI` ni `MONGO_ROOT_USERNAME`/`MONGO_ROOT_PASSWORD` dan avtomatik yig'adi va `mongodb` ichki hostini ishlatadi. Shuning uchun parollarda faqat URL-xavfsiz belgilardan (`A-Z a-z 0-9 - _ .`) foydalanish tavsiya etiladi. `$` belgisidan foydalanmang — Docker Compose uni o'zgaruvchi sifatida talqin qiladi.
-- `.env` dagi `MONGO_URI` (`localhost:27017`) backend'ni Docker'siz, to'g'ridan-to'g'ri host'da ishga tushirish uchun ishlatiladi.
+- Compose MongoDB'ni `rs0` nomli bitta tugunli replica set sifatida ishga tushiradi. Uning ichki authentication key'i birinchi start'da yaratiladi va `mongodb_data` volume'ida saqlanadi; uni repoga qo'shish kerak emas.
+- `.env` dagi `MONGO_URI` (`localhost:27017`) `directConnection=true` parametri bilan host'da ishlaydigan backend'ni Docker MongoDB'ga ulaydi. Compose ichida backend `replicaSet=rs0` URI'sidan foydalanadi.
 - Frontend API so'rovlarini standart holatda `/api` orqali yuboradi. Compose'da
   Nginx shu yo'lni backend'ga proxy qiladi; host development'da Vite proxy
   ishlatiladi.
 - Interfeys rus tilidagi brauzer sozlamasida ruscha, boshqa holatlarda o'zbekcha
-  ko'rsatiladi; tasdiqlangan dizayn/spec kelmagani uchun til tanlagich qo'shilmadi.
+  ko'rsatiladi. TZ til tanlagich xatti-harakatini belgilamagani uchun mavjud
+  tilni avtomatik tanlash saqlandi.
 
 ## Loyihani ishga tushirish
 
@@ -109,8 +119,10 @@ docker compose ps
 
 Standart host portlari band bo'lsa, `.env` da `MONGO_PORT`, `REDIS_PORT`, `BACKEND_PORT` va `FRONTEND_PORT` qiymatlarini o'zgartirish mumkin. Standart qiymatlar mos ravishda `27017`, `6379`, `3000` va `5173`.
 
-Backend MongoDB va Redis health check'laridan keyin, frontend esa backend
-health check'idan keyin ishga tushadi.
+MongoDB health check birinchi ishga tushishda `rs0` replica set'ni idempotent
+tarzda boshlaydi va primary tayyor bo'lguncha unhealthy qoladi. Backend MongoDB
+va Redis health check'laridan keyin, frontend esa backend health check'idan
+keyin ishga tushadi.
 
 ### Production ishga tushirish
 
@@ -124,10 +136,11 @@ health check'idan keyin ishga tushadi.
 5. TLS terminator public HTTPS trafikni host'dagi `FRONTEND_PORT` ga uzatsin.
    API, MongoDB va Redis portlarini internetga bevosita ochmang.
 
-Ilovada hozircha user yaratish yoki demo seed endpointi yo'q. CRM ma'lumotlari
-va operator/sales-head rollari uchun tasdiqlangan `docs/TZ.md` hamda
-`DECISIONS.md` checkout'da mavjud emas; production login va feature rollout'dan
-oldin ushbu manbalar va xavfsiz user provisioning jarayoni talab qilinadi.
+Ilovada hozircha user yaratish yoki demo seed endpointi yo'q. Tasdiqlangan
+talablar [docs/TZ.md](docs/TZ.md) da, asosiy texnik qarorlar
+[DECISIONS.md](DECISIONS.md) da yuritiladi. Operator/sales-head rollari va
+xavfsiz user provisioning M1 doirasida amalga oshiriladi; shu sababli hozircha
+production foydalanish uchun tayyor emas.
 
 ### Host'da ishlab chiqish (ixtiyoriy)
 
@@ -138,15 +151,21 @@ docker compose stop backend frontend
 docker compose up -d mongodb redis
 
 cd backend
-npm install
+npm ci
 npm start                # root .env faylini avtomatik o'qiydi; standart host porti 3001
 
 cd ../frontend
-npm install
+npm ci
 npm run dev              # /api so'rovlari http://localhost:3001 ga proxy qilinadi
 ```
 
-Host'da ishlatishdan oldin `.env` dagi `MONGO_URI` host'dan ko'rinadigan MongoDB portiga mos bo'lishi kerak. Portni `docker compose port mongodb 27017` bilan tekshiring; URI'da shu port va `authSource=admin` ishlating. Docker Compose'dagi `FRONTEND_PORT=5173` band bo'lsa, shu loyihaning `frontend` servisini to'xtating yoki Docker portini o'zgartiring. Docker va host frontend'i bir paytning o'zida bir portni ishlata olmaydi.
+Host'da ishlatishdan oldin `.env` dagi `MONGO_URI` host'dan ko'rinadigan MongoDB
+portiga mos bo'lishi kerak. Portni `docker compose port mongodb 27017` bilan
+tekshiring; URI'da `authSource=admin&directConnection=true` ishlating. MongoDB
+replica set Docker ichidagi `mongodb:27017` manzilini e'lon qiladi, shuning
+uchun host process'ga `replicaSet=rs0` URI'sini bermang. Docker Compose'dagi
+`FRONTEND_PORT=5173` band bo'lsa, shu loyihaning `frontend` servisini to'xtating
+yoki Docker portini o'zgartiring.
 
 ## Loyihani to'xtatish
 
@@ -165,14 +184,14 @@ docker compose logs -f frontend
 
 ## API endpointlar
 
-| Metod | Yo'l | Tavsif |
-|---|---|---|
-| GET | `/api` | API haqida ma'lumot |
-| GET | `/api/health` | Tizim holati (MongoDB ulanishi Mongoose orqali real tekshiriladi) |
-| POST | `/api/auth/login` | Email va parol orqali kirish; tokenlar `httpOnly` cookie'da saqlanadi |
-| POST | `/api/auth/refresh` | Refresh cookie orqali tokenlarni yangilash |
-| POST | `/api/auth/logout` | Joriy sessiyadan chiqish |
-| GET | `/api/auth/me` | Joriy foydalanuvchi ma'lumotlari |
+| Metod | Yo'l                | Tavsif                                                                |
+| ----- | ------------------- | --------------------------------------------------------------------- |
+| GET   | `/api`              | API haqida ma'lumot                                                   |
+| GET   | `/api/health`       | Tizim holati (MongoDB ulanishi Mongoose orqali real tekshiriladi)     |
+| POST  | `/api/auth/login`   | Email va parol orqali kirish; tokenlar `httpOnly` cookie'da saqlanadi |
+| POST  | `/api/auth/refresh` | Refresh cookie orqali tokenlarni yangilash                            |
+| POST  | `/api/auth/logout`  | Joriy sessiyadan chiqish                                              |
+| GET   | `/api/auth/me`      | Joriy foydalanuvchi ma'lumotlari                                      |
 
 `GET /api` javobi:
 

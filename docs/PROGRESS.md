@@ -1,94 +1,64 @@
 # Project Progress
 
-## Current phase
+## Current milestone
 
-Phase 5: CRM behavior and role verification (blocked pending source of truth).
+M0 — audit and foundation. Implementation and validation are complete.
 
-## Completed
+## Done
 
-- Phase 0 recon and baseline checks.
-- Created [AUDIT.md](./AUDIT.md) with findings, reproduction evidence, and a
-  phased worklist.
-- Confirmed Docker Compose startup and API health; backend and frontend builds
-  and linters pass, backend unit/e2e suites pass.
-- Confirmed the source-of-truth files (`docs/TZ.md`, `DECISIONS.md`, and
-  `docs/design/`) are not present in the checkout.
-- Phase 1 moved the apps with `git mv` to the required top-level
-  `backend/` and `frontend/` directories and updated Compose, README, and backend
-  root `.env` lookup paths.
-- Confirmed no tracked references to the old `apps/backend` or `apps/frontend`
-  paths remain; only the two required top-level code folders exist.
-- Rebuilt and restarted Compose successfully after the move.
-- Rechecked `workspacePlugin`: scoped queries receive their workspace filter
-  and missing `workspaceId` fails closed.
-- Phase 2 fixed session restoration on all routes, removed stale persisted
-  authentication state, deduplicated startup checks, and limited refresh retries
-  to eligible 401 responses.
-- Corrected the frontend login response type to match the backend's cookie-only
-  token contract.
-- Browser verification now confirms fresh `/dashboard` and `/` visits render the
-  login form instead of remaining on a loading screen.
-- Phase 3 changed the frontend image to a production Vite build served by Nginx,
-  with `/api` reverse-proxied to the backend and an Nginx health check.
-- Added frontend bind-address configuration and documented HTTPS/TLS termination
-  and production secret requirements.
-- Added a GitHub Actions workflow for backend/frontend install, lint, build,
-  backend tests, and Docker image builds.
-- Verified the documented CI commands locally, `docker compose config`, current
-  Compose health and proxy behavior, and a clean isolated Compose project with
-  temporary credentials; cleaned the isolated containers, volumes, network,
-  and environment file afterward.
-- Phase 4 installed i18next/react-i18next and routed existing login, dashboard,
-  role-label, session-loading, and login-error copy through Uzbek/Russian
-  translations. Uzbek is the default; Russian is selected for Russian browser
-  language settings. No language switcher was added without the missing UX spec.
-- Removed the dashboard's “STEP 1” placeholder and added accessible names to
-  the logout control and session-loading indicator.
-- Playwright verified Uzbek and Russian login screens and a localized invalid
-  login response; no failed requests or JavaScript page errors were observed.
+- Audited the existing codebase and recorded current scope, gaps, and milestone
+  worklist in [AUDIT.md](./AUDIT.md).
+- Converted approved specification sections 1–13 into [TZ.md](./TZ.md).
+- Moved the applications to top-level `backend/` and `frontend/` packages;
+  added package READMEs and retained independent package manifests/lockfiles.
+- Added a MongoDB `rs0` single-node replica-set bootstrap with persisted private
+  key storage, Redis, Compose health checks, and `.env.example`.
+- Added/retained Joi environment validation and added focused schema tests.
+- Registered the tenant plugin at the Mongoose connection. `TenantContext`
+  uses `AsyncLocalStorage`, fails closed, logs explicit bypasses, scopes query
+  and aggregation paths, validates writes, and rejects unsafe count estimates.
+- Scoped user ID/session updates by workspace; the two audited global identity
+  lookups are explicit `runWithoutTenant()` calls.
+- Configured static production frontend serving through Nginx with Docker DNS
+  resolution for backend replacement, and retained GitHub Actions CI.
+- Updated root/package setup docs and recorded foundation choices in
+  [DECISIONS.md](../DECISIONS.md).
 
 ## In progress
 
-- Product implementation and role-based browser verification are blocked until
-  the approved product sources and account provisioning process are supplied.
+- None. M0 is complete; wait for the user's “continue” before starting M1.
 
 ## Next
 
-- Once unblocked, implement the exact spec FRs, server-side role policies,
-  tenancy tests, and approved UI; continue deployment hardening and handover
-  verification.
+- Stop after M0 report and wait for the user's “continue”.
+- M1: implement the TZ authentication lifecycle, users, groups, roles and
+  backend rights matrix with tenant-isolation e2e tests.
 
 ## Known issues / blockers
 
-- See [AUDIT.md](./AUDIT.md), especially findings 1, 2, and 4.
-- Role-specific browser verification is not currently possible without approved
-  operator and sales-head accounts.
-- The current Compose stack uses the production Nginx frontend; the isolated
-  fresh-install stack was removed after verification.
+- The current application is only a foundation: the CRM modules and TZ roles
+  are not implemented. See [AUDIT.md](./AUDIT.md).
+- No role-specific accounts/bootstrap workflow exists yet; full role-based
+  browser verification belongs to M1.
+- Compose currently uses a one-member Mongo replica set and is not highly
+  available; production hardening is M15.
+- Frontend automated tests and CRM route coverage do not exist yet; add them
+  with the relevant feature milestones.
 
 ## Verification log
 
-- `docker compose up -d --build`: passed.
-- Docker health: MongoDB and Redis healthy; backend healthy.
-- Backend `build`, `lint -- --no-fix`, unit tests: passed (3 tests).
-- Backend e2e tests: passed (3 tests).
-- Frontend `build` (includes TypeScript build), `lint`: passed.
-- Browser: `/login` rendered; fresh unauthenticated `/dashboard` remained
-  loading; role-specific tests blocked.
-- Phase 1 after-move backend build/lint/unit/e2e and frontend build/lint: passed.
-- Docker rebuild: passed; backend health HTTP 200 and frontend HTTP 200.
-- Workspace isolation probe: scoped filter applied and missing tenant rejected.
-- Phase 2 frontend build/lint, backend build/lint/unit/e2e: passed.
-- Browser after auth fix: `/dashboard` and `/` both resolve to the login form;
-  no failed requests or JavaScript page errors; unauthenticated `me`/refresh
-  requests return expected 401 responses.
-- Phase 3: Compose configuration and all four services healthy; Nginx `/healthz`
-  and `/api/health` returned HTTP 200; SPA route returned HTTP 200.
-- Fresh project: isolated MongoDB/Redis initialized from generated temporary
-  credentials; all services became healthy and API health passed through Nginx.
-- Fresh-project check: initial command attempted unavailable `python`; retry
-  with installed `python3` succeeded. Temporary credentials and resources were
-  removed.
-- Phase 4 frontend build/typecheck and lint passed; backend build/lint/unit/e2e
-  tests passed. Browser verified Uzbek and Russian login copy and localized
-  invalid-credentials feedback.
+- Baseline before M0: backend build/lint, unit (3/3), and e2e (3/3) passed;
+  frontend build/typecheck and lint passed.
+- Earlier milestones: auth route restoration, Nginx serving/proxy, CI, and
+  Uzbek/Russian UI were verified with package checks, Compose health, and
+  Playwright.
+- Final M0: backend build/lint passed; unit tests passed (16/16); e2e passed
+  (3/3); frontend build/typecheck and lint passed.
+- Docker Compose config and Mongo entrypoint shell syntax passed. `docker compose
+  up -d --build` succeeded; all four services ran healthy, MongoDB
+  reported `rs0` primary with one member, and frontend plus API-through-Nginx
+  returned HTTP 200 after backend recreation.
+- A separate fresh-project Compose startup using temporary credentials was
+  previously verified; its temporary environment and isolated resources were
+  removed. Existing MongoDB data volumes were retained.
+- `git diff --check` passed.

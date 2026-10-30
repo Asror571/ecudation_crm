@@ -1,49 +1,42 @@
-# SotuvCRM Baseline Audit
+# UzbekCRM Audit
 
-Date: 2026-10-30
+Date: 2026-10-31
 
 ## Scope and baseline
 
-The repository does not contain `docs/TZ.md`, `DECISIONS.md`, or `docs/design/`.
-The README describes an M0 technical foundation, not the complete operator and
-sales-head CRM in the handover request. Findings below are based only on tracked
-code and the running Compose setup. Missing product requirements are not guessed.
+The approved specification v3.0 has been converted into [TZ.md](./TZ.md),
+covering its product-contract sections 1–13. The repository is a foundation,
+not a completed CRM: the existing React/NestJS application provides login,
+session restoration, a basic dashboard, health endpoints, and MongoDB-backed
+users/workspaces. It does not yet implement the CRM modules in the TZ.
 
-The documented `docker compose up -d --build` command succeeded. MongoDB and
-Redis reported healthy, the backend health endpoint returned HTTP 200, and the
-frontend returned HTTP 200. This environment's ignored `.env` overrides the
-README's default host ports; the Compose-mapped frontend and backend were
-reachable. Backend build, lint, unit tests (3/3), and e2e tests (3/3) passed.
-Frontend build/typecheck and lint passed. There are no frontend tests.
+The project is split into top-level `frontend/` and `backend/` packages.
+Compose runs MongoDB, Redis, the NestJS API, and a production-built React app
+served by Nginx. CI is configured for install, lint, build, backend tests, and
+Docker builds. M0 adds replica-set initialization, strict environment
+validation coverage, and a connection-level tenant plugin using
+`AsyncLocalStorage`.
 
-Browser routes found in the React router are `/`, `/login`, and `/dashboard`.
-The login screen rendered in Playwright. Its unauthenticated session check
-produced repeated HTTP 401 console errors. Opening `/dashboard` while logged out
-rendered no usable page and remained in its loading state. Role-specific testing
-could not be performed: there is no seed/bootstrap account, user-creation API,
-or `operator`/`sales_head` role in the current code. No mock accounts or data
-were added.
+The existing supported UI routes are `/login` and `/dashboard` (with `/`
+redirecting according to session state). The login view was exercised in
+Uzbek and Russian. There are no provisioned role-specific test accounts, so
+operator/sales-head browser workflows are not currently testable. The baseline
+had backend unit/e2e tests and no frontend test suite.
 
-## Findings
+## Findings and worklist
 
-| # | Severity | Area | Reproduction / evidence | Planned fix |
-|---|---|---|---|---|
-| 1 | blocker | product/spec | `docs/TZ.md`, `DECISIONS.md`, and `docs/design/` are absent; README describes only M0. | Recover the approved sources of truth before implementing product behavior. Do not infer features or role policy. |
-| 2 | blocker | CRM functionality | Backend currently exposes API health/info and auth; the frontend has only login and a placeholder dashboard. There are no lead, pipeline, call, or sales-head screens/modules in tracked source. | Implement the spec's exact FRs after the TZ is available; maintain this as a blocked scope meanwhile. |
-| 3 | major | auth/routing | Baseline: open `/dashboard` directly in a fresh browser session. The protected route remained in its loading state because auth initialization was only invoked by `useAuth` on the login page. | **Resolved:** session restoration now runs at app startup, and direct `/dashboard` and `/` visits redirect to `/login` when unauthenticated. A valid logged-in role remains unverified because no test accounts exist. |
-| 4 | major | auth/testability | No documented seed, bootstrap flow, or user creation controller exists. Existing role literals are `super_admin`, `workspace_super_admin`, and `admin`; the requested operator/sales-head role paths cannot be exercised. | Align user provisioning and role tests with the recovered TZ and confirmed decisions. |
-| 5 | major | tenancy | `workspacePlugin` is attached to the user schema only. No lead/resource models or cross-workspace integration tests exist, so the required global fail-closed and foreign-resource-404 behavior cannot be demonstrated. | Establish and test workspace scoping for each spec resource before adding/refactoring its API. |
-| 6 | major | auth/session | Baseline: the frontend response interceptor attempted refresh for any 401, including refresh requests, producing repeated unauthorized requests on a fresh session. Login/logout/session restoration lack backend-integrated tests. | **Partially resolved:** session initialization is now app-wide and deduplicated; login/refresh 401s cannot recursively refresh, and other requests retry at most once. Valid credential, refresh rotation, and logout flows remain unverified without provisioned users. |
-| 7 | major | deployment | Baseline: Compose started the frontend with the Vite development server and no CI workflow was tracked. | **Implemented:** the frontend image builds static assets and serves them through Nginx, which reverse-proxies `/api`; Compose includes frontend health checks and a GitHub Actions CI workflow. Both existing and isolated fresh-project Compose starts passed locally. The GitHub-hosted workflow has not yet run. |
-| 8 | major | quality/i18n | Baseline: frontend copy was inline and no i18n setup existed. | **Resolved for existing screens:** i18next now provides Uzbek and Russian copy, selects Russian for a Russian browser and Uzbek otherwise, and localizes the login error and existing role labels. Playwright verified both login locales. No language selector was added without the approved UX spec. |
-| 9 | minor | UI | Baseline login was a basic form and the dashboard showed “STEP 1”; no approved design screens are present. | **Partially resolved:** removed the implementation placeholder and improved the dashboard heading and accessible labels. Full UI polish remains blocked until approved designs or TZ tokens are available. |
-| 10 | minor | test coverage | Backend tests cover only the info/health controller; frontend has no test script or browser regression suite. | Add focused auth, tenancy, and route tests alongside the related implementation. |
+| #   | Severity | Area                   | Current evidence / reproduction                                                                                                                                                                                                                              | Required work                                                                                                                                                                       |
+| --- | -------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | blocker  | CRM functionality      | No deals, contacts, pipelines, tasks, inbox, analytics, widgets, or sales-head screens/services are present.                                                                                                                                                 | Implement the TZ modules milestone by milestone, without introducing features outside the contract.                                                                                 |
+| 2   | blocker  | roles and provisioning | Existing role literals and provisioning do not support the TZ role/group rights matrix; there are no operator/sales-head accounts for end-to-end testing.                                                                                                    | Implement M1 users, groups, roles and backend rights; add test fixtures and verify the rights matrix.                                                                               |
+| 3   | major    | tenant isolation       | A connection-level plugin now scopes tenant-schema query/aggregate operations, fails closed without context, validates saves/bulk inserts, and prevents cross-tenant bulk filters or workspace reassignment. Focused unit coverage verifies these behaviors. | M1 must verify isolation end-to-end for auth/users and every later module, including forbidden-resource 404 behavior. Review new Mongoose operations against the plugin before use. |
+| 4   | major    | authentication         | App-wide session restoration and bounded refresh retries are implemented. Login/refresh/logout have not been verified with provisioned users; refresh-token reuse detection and must-change-password are not implemented.                                    | M1 implements and tests the complete TZ auth lifecycle, rate limiting, and session security.                                                                                        |
+| 5   | major    | deployment             | Docker Compose uses a single-node MongoDB `rs0` replica set, Redis, backend health checks, and static Nginx frontend serving. Nginx uses Docker DNS resolution for backend replacement. A single Mongo member is not highly available.                       | M0 verifies a fresh isolated Compose project and API proxy. M15 adds the production topology, TLS deployment, backups/restore, and handover docs.                                   |
+| 6   | major    | UI/i18n                | Existing login/dashboard copy supports Uzbek and Russian, but there is no complete CRM UI, design system, theme implementation, or browser coverage of role-specific routes.                                                                                 | Apply TZ section 5 and localization as each UI milestone is implemented; complete responsive/a11y/browser checks in M14.                                                            |
+| 7   | major    | testing                | Backend unit and e2e tests cover the existing foundation; frontend has no configured automated test suite. CRM behavior and tenant/rights scenarios are untested because the modules do not exist.                                                           | Add focused unit and e2e coverage with each milestone; do not skip or weaken tests.                                                                                                 |
+| 8   | minor    | setup/documentation    | Root and package READMEs now describe the split packages and local checks; environment and replica-set requirements need to stay aligned as deployment evolves.                                                                                              | Keep setup instructions, `.env.example`, Swagger, and progress notes synchronized with implementation.                                                                              |
 
-## Exit notes
+## M0 status
 
-- Baseline commands run from the repository root initially failed because there
-  is intentionally no root `package.json`; the documented per-app commands then
-  passed when run from the app package roots.
-- No baseline source files were changed by linting.
-- Authentication as both requested roles and the full CRM workflow remain
-  blocked by the missing specification, account provisioning, and features.
+The source-of-truth documentation and foundation work are in progress. See
+[PROGRESS.md](./PROGRESS.md) for verified commands and remaining exit checks.

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import {
@@ -10,6 +11,7 @@ import {
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { workspacePlugin } from './common/plugins/workspace.plugin';
 
 @Module({
   imports: [
@@ -26,6 +28,10 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         retryAttempts: 5,
         retryDelay: 3000,
         serverSelectionTimeoutMS: 5000,
+        connectionFactory: (connection: Connection): Connection => {
+          connection.plugin(workspacePlugin);
+          return connection;
+        },
       }),
     }),
     AuthModule,

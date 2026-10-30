@@ -8,18 +8,17 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
+import { TenantContext } from '../common/tenant-context';
 
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-    const existingUser = await this.userModel
-      .findOne({
-        email: createUserDto.email,
-      })
-      .setOptions({ skipWorkspaceFilter: true })
-      .exec();
+    const existingUser = await TenantContext.runWithoutTenant(
+      'global_email_uniqueness_check',
+      () => this.userModel.findOne({ email: createUserDto.email }).exec(),
+    );
 
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -32,34 +31,26 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    return user.save();
+    return TenantContext.run(createUserDto.workspaceId, () => user.save());
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel
-      .findOne({ email })
-      .setOptions({ skipWorkspaceFilter: true })
-      .exec();
+    return TenantContext.runWithoutTenant('authentication_email_lookup', () =>
+      this.userModel.findOne({ email }).exec(),
+    );
   }
 
   async findById(
     id: string,
-    workspaceId?: string,
+    workspaceId: string,
   ): Promise<UserDocument | null> {
-    const query = this.userModel.findById(id);
-    query.setOptions(
-      workspaceId
-        ? { workspaceId, skipWorkspaceFilter: false }
-        : { skipWorkspaceFilter: true },
+    return TenantContext.run(workspaceId, () =>
+      this.userModel.findById(id).exec(),
     );
-    return query.exec();
   }
 
   async findAll(workspaceId: string): Promise<UserDocument[]> {
-    return this.userModel
-      .find()
-      .setOptions({ workspaceId, skipWorkspaceFilter: false })
-      .exec();
+    return TenantContext.run(workspaceId, () => this.userModel.find().exec());
   }
 
   async update(
@@ -67,10 +58,9 @@ export class UsersService {
     updateData: Partial<User>,
     workspaceId: string,
   ): Promise<UserDocument> {
-    const user = await this.userModel
-      .findByIdAndUpdate(id, updateData, { new: true })
-      .setOptions({ workspaceId, skipWorkspaceFilter: false })
-      .exec();
+    const user = await TenantContext.run(workspaceId, () =>
+      this.userModel.findByIdAndUpdate(id, updateData, { new: true }).exec(),
+    );
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -88,25 +78,25 @@ export class UsersService {
 
   async updateRefreshToken(
     userId: string,
+    workspaceId: string,
     refreshToken: string,
   ): Promise<void> {
-    await this.userModel
-      .findByIdAndUpdate(userId, { refreshToken })
-      .setOptions({ skipWorkspaceFilter: true })
-      .exec();
+    await TenantContext.run(workspaceId, () =>
+      this.userModel.findByIdAndUpdate(userId, { refreshToken }).exec(),
+    );
   }
 
-  async removeRefreshToken(userId: string): Promise<void> {
-    await this.userModel
-      .findByIdAndUpdate(userId, { refreshToken: null })
-      .setOptions({ skipWorkspaceFilter: true })
-      .exec();
+  async removeRefreshToken(userId: string, workspaceId: string): Promise<void> {
+    await TenantContext.run(workspaceId, () =>
+      this.userModel.findByIdAndUpdate(userId, { refreshToken: null }).exec(),
+    );
   }
 
-  async updateLastLogin(userId: string): Promise<void> {
-    await this.userModel
-      .findByIdAndUpdate(userId, { lastLoginAt: new Date() })
-      .setOptions({ skipWorkspaceFilter: true })
-      .exec();
+  async updateLastLogin(userId: string, workspaceId: string): Promise<void> {
+    await TenantContext.run(workspaceId, () =>
+      this.userModel
+        .findByIdAndUpdate(userId, { lastLoginAt: new Date() })
+        .exec(),
+    );
   }
 }

@@ -22,7 +22,7 @@ type CookieRequest = {
 };
 
 type AuthenticatedRequest = {
-  user: { id: string };
+  user: { id: string; workspaceId: string };
 };
 
 @Controller('auth')
@@ -96,7 +96,7 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
   ) {
-    await this.authService.logout(request.user.id);
+    await this.authService.logout(request.user.id, request.user.workspaceId);
 
     response.clearCookie('access_token');
     response.clearCookie('refresh_token');
@@ -107,6 +107,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@Req() request: AuthenticatedRequest) {
-    return this.authService.me(request.user.id);
+    return this.authService.me(request.user.id, request.user.workspaceId);
   }
 }

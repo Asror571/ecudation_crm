@@ -7,6 +7,7 @@ import type { Request } from 'express';
 
 interface AuthTokenPayload {
   sub: string;
+  workspaceId: string;
 }
 
 @Injectable()
@@ -33,7 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: AuthTokenPayload) {
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.usersService.findById(
+      payload.sub,
+      payload.workspaceId,
+    );
     if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
