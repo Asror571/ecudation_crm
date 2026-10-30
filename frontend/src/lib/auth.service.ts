@@ -8,8 +8,6 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
   user: User;
-  accessToken: string;
-  refreshToken: string;
 }
 
 export const authService = {
@@ -20,10 +18,6 @@ export const authService = {
 
   async logout(): Promise<void> {
     await api.post('/auth/logout');
-  },
-
-  async refresh(): Promise<void> {
-    await api.post('/auth/refresh');
   },
 
   async me(): Promise<User> {

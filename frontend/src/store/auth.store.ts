@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export type UserRole = 'super_admin' | 'workspace_super_admin' | 'admin';
 
@@ -25,18 +24,11 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      isLoading: true,
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setLoading: (loading) => set({ isLoading: loading }),
-      logout: () => set({ user: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'auth-storage',
-    }
-  )
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  logout: () => set({ user: null, isAuthenticated: false }),
+}));

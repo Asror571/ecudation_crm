@@ -1,29 +1,11 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { authService } from '../lib/auth.service';
 import { isAxiosError } from 'axios';
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore();
+  const { user, isAuthenticated, isLoading, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const userData = await authService.me();
-        setUser(userData);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isLoading) {
-      checkAuth();
-    }
-  }, [isLoading, setUser, setLoading]);
 
   const login = async (
     email: string,
