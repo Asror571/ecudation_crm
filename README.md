@@ -23,45 +23,19 @@ Loyihada **M0 texnik poydevori** bilan birga dastlabki autentifikatsiya va works
 
 ```text
 education-crm/
-├── apps/
-│   ├── backend/
-│   │   ├── src/
-│   │   │   ├── config/
-│   │   │   │   └── env.validation.ts   # Joi orqali env validatsiyasi
-│   │   │   ├── app.controller.spec.ts  # unit testlar
-│   │   │   ├── app.controller.ts       # GET /api, GET /api/health
-│   │   │   ├── app.module.ts           # ConfigModule + MongooseModule
-│   │   │   ├── app.service.ts          # info va health logikasi
-│   │   │   └── main.ts                 # bootstrap, /api prefiks, CORS
-│   │   ├── test/
-│   │   │   ├── app.e2e-spec.ts
-│   │   │   └── jest-e2e.json
-│   │   ├── Dockerfile
-│   │   ├── .dockerignore
-│   │   ├── eslint.config.mjs
-│   │   ├── nest-cli.json
-│   │   ├── package.json
-│   │   ├── package-lock.json
-│   │   ├── tsconfig.json
-│   │   └── tsconfig.build.json
-│   └── frontend/
-│       ├── public/
-│       │   └── favicon.svg
-│       ├── src/
-│       │   ├── App.tsx                 # tizim holati ekrani
-│       │   ├── index.css               # @import "tailwindcss"
-│       │   ├── main.tsx
-│       │   └── vite-env.d.ts
-│       ├── Dockerfile
-│       ├── .dockerignore
-│       ├── .oxlintrc.json
-│       ├── index.html
-│       ├── package.json
-│       ├── package-lock.json
-│       ├── tsconfig.json
-│       ├── tsconfig.app.json
-│       ├── tsconfig.node.json
-│       └── vite.config.ts              # Tailwind plagini + /api proxy
+├── backend/
+│   ├── src/                            # auth, users, workspaces, health
+│   ├── test/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── package-lock.json
+├── frontend/
+│   ├── public/
+│   ├── src/                            # React application
+│   ├── Dockerfile
+│   ├── package.json
+│   └── package-lock.json
+├── docs/
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
@@ -124,7 +98,7 @@ MongoDB va Redis'ni Docker'da qoldirib, ilovalarni host'da ishga tushirish mumki
 docker compose stop backend frontend
 docker compose up -d mongodb redis
 
-cd apps/backend
+cd backend
 npm install
 npm start                # root .env faylini avtomatik o'qiydi; standart host porti 3001
 
@@ -192,7 +166,7 @@ Barcha portlar faqat `127.0.0.1` ga bog'langan (tashqi tarmoqdan ochiq emas).
 ## Testlar va build
 
 ```bash
-cd apps/backend
+cd backend
 npm run build
 npm run lint
 npm test
@@ -259,7 +233,7 @@ docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
 
 ### Docker build xatolari
 
-- `apps/*/package-lock.json` mavjud va `package.json` bilan mos ekanini tekshiring (`npm ci` lockfile talab qiladi).
+- `backend/package-lock.json` va `frontend/package-lock.json` mavjud hamda `package.json` bilan mos ekanini tekshiring (`npm ci` lockfile talab qiladi).
 - Keshsiz qayta build: `docker compose build --no-cache`.
 - Docker Hub `429 Too Many Requests` xatosi — biroz kuting yoki `docker login` qiling.
 

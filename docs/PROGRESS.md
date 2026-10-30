@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 1: repository restructure into `frontend/` and `backend/`.
+Phase 2: authentication initialization and retry behavior.
 
 ## Completed
 
@@ -13,17 +13,26 @@ Phase 1: repository restructure into `frontend/` and `backend/`.
   and linters pass, backend unit/e2e suites pass.
 - Confirmed the source-of-truth files (`docs/TZ.md`, `DECISIONS.md`, and
   `docs/design/`) are not present in the checkout.
+- Phase 1 moved the apps with `git mv` to the required top-level
+  `backend/` and `frontend/` directories and updated Compose, README, and backend
+  root `.env` lookup paths.
+- Confirmed no tracked references to the old `apps/backend` or `apps/frontend`
+  paths remain; only the two required top-level code folders exist.
+- Rebuilt and restarted Compose successfully after the move.
+- Rechecked `workspacePlugin`: scoped queries receive their workspace filter
+  and missing `workspaceId` fails closed.
 
 ## In progress
 
-- Move the app directories using `git mv`, then update Compose, Docker/build
-  contexts, README paths, and any relative configuration references.
-- Keep tenant scoping behavior intact and run all baseline checks after moves.
+- Fix app-wide session restoration, direct protected-route loading, and
+  ineligible refresh retries.
+- Add focused coverage where possible without depending on the missing product
+  specification or inventing user roles/accounts.
 
 ## Next
 
-- Phase 2: resolve authentication initialization and refresh retry defects.
-- Continue with deployment, UI, and other work only where requirements can be
+- Prepare deployment and CI for the new folder layout.
+- Continue with UI and product work only where requirements can be
   established from tracked source; spec-dependent product functionality is
   blocked until `docs/TZ.md` and `DECISIONS.md` are restored.
 
@@ -43,3 +52,6 @@ Phase 1: repository restructure into `frontend/` and `backend/`.
 - Frontend `build` (includes TypeScript build), `lint`: passed.
 - Browser: `/login` rendered; fresh unauthenticated `/dashboard` remained
   loading; role-specific tests blocked.
+- Phase 1 after-move backend build/lint/unit/e2e and frontend build/lint: passed.
+- Docker rebuild: passed; backend health HTTP 200 and frontend HTTP 200.
+- Workspace isolation probe: scoped filter applied and missing tenant rejected.
