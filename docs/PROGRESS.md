@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 3: production deployment and CI preparation.
+Phase 4: Uzbek/Russian localization and current-screen polish.
 
 ## Completed
 
@@ -28,19 +28,28 @@ Phase 3: production deployment and CI preparation.
   token contract.
 - Browser verification now confirms fresh `/dashboard` and `/` visits render the
   login form instead of remaining on a loading screen.
+- Phase 3 changed the frontend image to a production Vite build served by Nginx,
+  with `/api` reverse-proxied to the backend and an Nginx health check.
+- Added frontend bind-address configuration and documented HTTPS/TLS termination
+  and production secret requirements.
+- Added a GitHub Actions workflow for backend/frontend install, lint, build,
+  backend tests, and Docker image builds.
+- Verified the documented CI commands locally, `docker compose config`, current
+  Compose health and proxy behavior, and a clean isolated Compose project with
+  temporary credentials; cleaned the isolated containers, volumes, network,
+  and environment file afterward.
 
 ## In progress
 
-- Add production static frontend serving/reverse proxy, health/configuration
-  guidance, and CI checks using the current toolchain.
-- Keep the required `backend/` and `frontend/` top-level layout and the
-  workspace fail-closed behavior verified.
+- Localize all existing frontend user-facing copy for Uzbek and Russian and
+  polish only the currently implemented login/dashboard screens.
+- Keep the required `backend/` and `frontend/` top-level layout and workspace
+  fail-closed behavior verified.
 
 ## Next
 
-- Continue with UI and product work only where requirements can be
-  established from tracked source; spec-dependent product functionality is
-  blocked until `docs/TZ.md` and `DECISIONS.md` are restored.
+- Restore the missing spec and decisions before implementing CRM functionality,
+  target-role policy, or unapproved designs.
 
 ## Known issues / blockers
 
@@ -65,3 +74,10 @@ Phase 3: production deployment and CI preparation.
 - Browser after auth fix: `/dashboard` and `/` both resolve to the login form;
   no failed requests or JavaScript page errors; unauthenticated `me`/refresh
   requests return expected 401 responses.
+- Phase 3: Compose configuration and all four services healthy; Nginx `/healthz`
+  and `/api/health` returned HTTP 200; SPA route returned HTTP 200.
+- Fresh project: isolated MongoDB/Redis initialized from generated temporary
+  credentials; all services became healthy and API health passed through Nginx.
+- Fresh-project check: initial command attempted unavailable `python`; retry
+  with installed `python3` succeeded. Temporary credentials and resources were
+  removed.

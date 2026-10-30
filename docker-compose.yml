@@ -73,15 +73,19 @@ services:
     build:
       context: ./frontend
     restart: unless-stopped
-    environment:
-      API_PROXY_TARGET: http://backend:3000
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-5173}:80"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - crm_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
 volumes:
   mongodb_data:

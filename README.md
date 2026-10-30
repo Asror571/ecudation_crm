@@ -14,7 +14,7 @@ Loyihada **M0 texnik poydevori** bilan birga dastlabki autentifikatsiya va works
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`), oxlint |
 | Ma'lumotlar bazasi | MongoDB 7 (autentifikatsiya yoqilgan) |
 | Kesh infratuzilmasi | Redis 7 Alpine (parol bilan, AOF persistence) |
-| Infratuzilma | Docker, Docker Compose |
+| Infratuzilma | Docker, Docker Compose, Nginx (production frontend and `/api` reverse proxy) |
 | Paket menejeri | npm (lockfile'lar repoda saqlanadi) |
 
 > Redis M0 bosqichida faqat infratuzilma sifatida ishga tushiriladi. Backend hozircha Redis'ga ulanmaydi, shuning uchun frontend Redis holatini ko'rsatmaydi.
@@ -32,10 +32,12 @@ education-crm/
 ├── frontend/
 │   ├── public/
 │   ├── src/                            # React application
+│   ├── nginx.conf                      # Static serving and backend reverse proxy
 │   ├── Dockerfile
 │   ├── package.json
 │   └── package-lock.json
 ├── docs/
+├── .github/workflows/ci.yml
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
@@ -55,10 +57,16 @@ education-crm/
 cp .env.example .env
 ```
 
-So'ng `.env` faylidagi standart parollarni **albatta** almashtiring:
+So'ng `.env` faylidagi barcha namunaviy parol va kalitlarni **albatta**
+almashtiring:
 
-- `MONGO_ROOT_PASSWORD` va `MONGO_URI` ichidagi parol bir xil bo'lishi kerak.
-- `REDIS_PASSWORD` — Redis paroli.
+- `MONGO_ROOT_PASSWORD` va `REDIS_PASSWORD` uchun kuchli, noyob parollar
+  belgilang.
+- `JWT_SECRET` va `JWT_REFRESH_SECRET` uchun alohida, tasodifiy va kamida
+  32 belgili kalitlar belgilang.
+- Docker Compose `MONGO_URI` ni MongoDB o'zgaruvchilaridan tuzadi. Host'da
+  ishlatganda `MONGO_URI` dagi credentiallar `MONGO_ROOT_PASSWORD` bilan mos
+  bo'lishi kerak.
 
 Kuchli tasodifiy parol yaratish uchun:
 
@@ -69,10 +77,19 @@ openssl rand -hex 24
 Muhim eslatmalar:
 
 - `.env` hech qachon Git'ga qo'shilmaydi (`.gitignore` da). Faqat `.env.example` commit qilinadi.
+- Production'da `NODE_ENV=production` va `FRONTEND_URL` ni brauzer ishlatadigan
+  aniq origin'ga (masalan, `https://crm.example.com`) o'rnating. TLS'ni tashqi
+  load balancer yoki edge reverse proxy'da yakunlang; production cookie'lari
+  `Secure` bo'ladi.
+- `FRONTEND_BIND_ADDRESS=127.0.0.1` frontend'ni faqat shu mashinada ochadi.
+  Alohida proxy host/container'dan ulanish kerak bo'lsa, `0.0.0.0` ni faqat
+  firewall bilan cheklangan tarmoqda qo'llang.
 - `MONGO_URI` ichidagi login/parolda URL uchun maxsus belgilar (`@ : / ? # [ ] %` va h.k.) bo'lsa, ular **percent-encode** qilinishi shart (masalan, `@` → `%40`).
 - Docker Compose `MONGO_URI` ni `MONGO_ROOT_USERNAME`/`MONGO_ROOT_PASSWORD` dan avtomatik yig'adi va `mongodb` ichki hostini ishlatadi. Shuning uchun parollarda faqat URL-xavfsiz belgilardan (`A-Z a-z 0-9 - _ .`) foydalanish tavsiya etiladi. `$` belgisidan foydalanmang — Docker Compose uni o'zgaruvchi sifatida talqin qiladi.
 - `.env` dagi `MONGO_URI` (`localhost:27017`) backend'ni Docker'siz, to'g'ridan-to'g'ri host'da ishga tushirish uchun ishlatiladi.
-- Frontend API so'rovlarini standart holatda `/api` orqali yuboradi; Vite bu yo'lni backend'ga proxy qiladi. Alohida API manzili kerak bo'lsa, `VITE_API_URL` ni `https://api.example.com/api` kabi to'liq manzilga sozlang.
+- Frontend API so'rovlarini standart holatda `/api` orqali yuboradi. Compose'da
+  Nginx shu yo'lni backend'ga proxy qiladi; host development'da Vite proxy
+  ishlatiladi.
 
 ## Loyihani ishga tushirish
 
@@ -80,7 +97,9 @@ Muhim eslatmalar:
 docker compose up -d --build
 ```
 
-To'rtta servis ishga tushadi: `mongodb`, `redis`, `backend`, `frontend`. Holatini tekshirish:
+To'rtta servis ishga tushadi: `mongodb`, `redis`, `backend`, `frontend`.
+Frontend production build Nginx orqali beriladi, Nginx `/api` so'rovlarini
+backend'ga uzatadi. Holatini tekshirish:
 
 ```bash
 docker compose ps
@@ -88,7 +107,25 @@ docker compose ps
 
 Standart host portlari band bo'lsa, `.env` da `MONGO_PORT`, `REDIS_PORT`, `BACKEND_PORT` va `FRONTEND_PORT` qiymatlarini o'zgartirish mumkin. Standart qiymatlar mos ravishda `27017`, `6379`, `3000` va `5173`.
 
-Backend `mongodb` va `redis` health check'lari muvaffaqiyatli bo'lgandan keyingina ishga tushadi.
+Backend MongoDB va Redis health check'laridan keyin, frontend esa backend
+health check'idan keyin ishga tushadi.
+
+### Production ishga tushirish
+
+1. `.env.example` dan `.env` yarating va barcha namunaviy kalitlarni almashtiring.
+2. `NODE_ENV=production` va `FRONTEND_URL` ni haqiqiy HTTPS origin'ga sozlang.
+3. Shu host'dagi TLS terminator uchun frontend'ni `127.0.0.1` da qoldiring.
+   Alohida proxy host ishlatilsa, `FRONTEND_BIND_ADDRESS=0.0.0.0` ni faqat
+   firewall bilan cheklangan tarmoqda qo'llang.
+4. `docker compose up -d --build` bilan ishga tushiring va
+   `docker compose ps` da to'rtta servis holatini tekshiring.
+5. TLS terminator public HTTPS trafikni host'dagi `FRONTEND_PORT` ga uzatsin.
+   API, MongoDB va Redis portlarini internetga bevosita ochmang.
+
+Ilovada hozircha user yaratish yoki demo seed endpointi yo'q. CRM ma'lumotlari
+va operator/sales-head rollari uchun tasdiqlangan `docs/TZ.md` hamda
+`DECISIONS.md` checkout'da mavjud emas; production login va feature rollout'dan
+oldin ushbu manbalar va xavfsiz user provisioning jarayoni talab qilinadi.
 
 ### Host'da ishlab chiqish (ixtiyoriy)
 
@@ -227,8 +264,8 @@ docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
 ### Frontend backend'ga ulana olmayapti
 
 - `curl http://localhost:3001/api/health` — host'da ishlayotgan backend javob berayotganini tekshiring.
-- `curl http://localhost:5173/api/health` — Vite proxy ishlayotganini tekshiring.
-- Frontend standartda nisbiy `/api` manzilidan foydalanadi; Docker'da proxy `API_PROXY_TARGET=http://backend:3000`, host'da esa `http://localhost:3001` ga yo'naltiriladi.
+- `curl http://localhost:5173/api/health` — Docker'da Nginx reverse proxy'ni tekshiring.
+- Frontend standartda nisbiy `/api` manzilidan foydalanadi; Docker Nginx `backend:3000` ga, host development'dagi Vite esa `http://localhost:3001` ga yo'naltiradi.
 - `docker compose logs frontend` dagi `proxy error` xabarlariga qarang.
 
 ### Docker build xatolari
