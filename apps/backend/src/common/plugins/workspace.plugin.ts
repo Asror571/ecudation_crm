@@ -10,9 +10,15 @@ function applyWorkspaceFilter(this: Query<unknown, unknown>): void {
     string,
     unknown
   >;
-  if (skipWorkspaceFilter !== true) {
-    this.where({ workspaceId });
+  if (skipWorkspaceFilter === true) {
+    return;
   }
+
+  if (typeof workspaceId !== 'string' || workspaceId.length === 0) {
+    throw new Error('workspaceId is required for tenant-scoped queries');
+  }
+
+  this.where({ workspaceId });
 }
 
 export function workspacePlugin(schema: Schema): void {

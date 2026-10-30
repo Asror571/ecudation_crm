@@ -18,6 +18,7 @@ export class UsersService {
       .findOne({
         email: createUserDto.email,
       })
+      .setOptions({ skipWorkspaceFilter: true })
       .exec();
 
     if (existingUser) {
@@ -35,17 +36,23 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email }).exec();
+    return this.userModel
+      .findOne({ email })
+      .setOptions({ skipWorkspaceFilter: true })
+      .exec();
   }
 
   async findById(
     id: string,
     workspaceId?: string,
   ): Promise<UserDocument | null> {
-    return this.userModel
-      .findById(id)
-      .setOptions({ workspaceId, skipWorkspaceFilter: false })
-      .exec();
+    const query = this.userModel.findById(id);
+    query.setOptions(
+      workspaceId
+        ? { workspaceId, skipWorkspaceFilter: false }
+        : { skipWorkspaceFilter: true },
+    );
+    return query.exec();
   }
 
   async findAll(workspaceId: string): Promise<UserDocument[]> {
@@ -83,18 +90,23 @@ export class UsersService {
     userId: string,
     refreshToken: string,
   ): Promise<void> {
-    await this.userModel.findByIdAndUpdate(userId, { refreshToken }).exec();
+    await this.userModel
+      .findByIdAndUpdate(userId, { refreshToken })
+      .setOptions({ skipWorkspaceFilter: true })
+      .exec();
   }
 
   async removeRefreshToken(userId: string): Promise<void> {
     await this.userModel
       .findByIdAndUpdate(userId, { refreshToken: null })
+      .setOptions({ skipWorkspaceFilter: true })
       .exec();
   }
 
   async updateLastLogin(userId: string): Promise<void> {
     await this.userModel
       .findByIdAndUpdate(userId, { lastLoginAt: new Date() })
+      .setOptions({ skipWorkspaceFilter: true })
       .exec();
   }
 }

@@ -98,6 +98,7 @@ Muhim eslatmalar:
 - `MONGO_URI` ichidagi login/parolda URL uchun maxsus belgilar (`@ : / ? # [ ] %` va h.k.) bo'lsa, ular **percent-encode** qilinishi shart (masalan, `@` → `%40`).
 - Docker Compose `MONGO_URI` ni `MONGO_ROOT_USERNAME`/`MONGO_ROOT_PASSWORD` dan avtomatik yig'adi va `mongodb` ichki hostini ishlatadi. Shuning uchun parollarda faqat URL-xavfsiz belgilardan (`A-Z a-z 0-9 - _ .`) foydalanish tavsiya etiladi. `$` belgisidan foydalanmang — Docker Compose uni o'zgaruvchi sifatida talqin qiladi.
 - `.env` dagi `MONGO_URI` (`localhost:27017`) backend'ni Docker'siz, to'g'ridan-to'g'ri host'da ishga tushirish uchun ishlatiladi.
+- Frontend API so'rovlarini standart holatda `/api` orqali yuboradi; Vite bu yo'lni backend'ga proxy qiladi. Alohida API manzili kerak bo'lsa, `VITE_API_URL` ni `https://api.example.com/api` kabi to'liq manzilga sozlang.
 
 ## Loyihani ishga tushirish
 
@@ -115,21 +116,24 @@ Standart host portlari band bo'lsa, `.env` da `MONGO_PORT`, `REDIS_PORT`, `BACKE
 
 Backend `mongodb` va `redis` health check'lari muvaffaqiyatli bo'lgandan keyingina ishga tushadi.
 
-### Docker'siz ishlab chiqish (ixtiyoriy)
+### Host'da ishlab chiqish (ixtiyoriy)
 
 MongoDB va Redis'ni Docker'da qoldirib, ilovalarni host'da ishga tushirish mumkin:
 
 ```bash
+docker compose stop backend frontend
 docker compose up -d mongodb redis
 
 cd apps/backend
 npm install
-npm run start:dev        # root .env faylini avtomatik o'qiydi
+npm start                # root .env faylini avtomatik o'qiydi; standart host porti 3001
 
 cd ../frontend
 npm install
-npm run dev              # /api so'rovlari http://localhost:3000 ga proxy qilinadi
+npm run dev              # /api so'rovlari http://localhost:3001 ga proxy qilinadi
 ```
+
+Host'da ishlatishdan oldin `.env` dagi `MONGO_URI` host'dan ko'rinadigan MongoDB portiga mos bo'lishi kerak. Portni `docker compose port mongodb 27017` bilan tekshiring; URI'da shu port va `authSource=admin` ishlating. Docker Compose'dagi `FRONTEND_PORT=5173` band bo'lsa, shu loyihaning `frontend` servisini to'xtating yoki Docker portini o'zgartiring. Docker va host frontend'i bir paytning o'zida bir portni ishlata olmaydi.
 
 ## Loyihani to'xtatish
 
@@ -207,7 +211,7 @@ npm run lint
 
 ### Port band
 
-`port is already allocated` xatosi 27017, 6379, 3000 yoki 5173 portlari boshqa jarayon tomonidan band ekanini bildiradi. Band qilgan jarayonni toping (`lsof -i :3000` yoki `ss -ltnp`) va to'xtating, yoki `docker-compose.yml` dagi host portini o'zgartiring.
+`port is already allocated` xatosi kerakli host portini boshqa jarayon band qilganini bildiradi. Band qilgan jarayonni toping (`lsof -i :5173` yoki `ss -ltnp`) va faqat o'zingizga tegishli bo'lsa to'xtating; aks holda loyiha portini `.env` dagi `FRONTEND_PORT`, `BACKEND_PORT`, `MONGO_PORT` yoki `REDIS_PORT` orqali o'zgartiring. Host'dagi backend standartda 3001 portidan foydalanadi; Compose backend'i ichki 3000 portida ishlaydi.
 
 ### MongoDB autentifikatsiya xatosi
 
@@ -248,9 +252,9 @@ docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'
 
 ### Frontend backend'ga ulana olmayapti
 
-- `curl http://localhost:3000/api/health` — backend javob berayotganini tekshiring.
+- `curl http://localhost:3001/api/health` — host'da ishlayotgan backend javob berayotganini tekshiring.
 - `curl http://localhost:5173/api/health` — Vite proxy ishlayotganini tekshiring.
-- Docker'da `API_PROXY_TARGET=http://backend:3000`, host'da esa standart `http://localhost:3000` ishlatiladi.
+- Frontend standartda nisbiy `/api` manzilidan foydalanadi; Docker'da proxy `API_PROXY_TARGET=http://backend:3000`, host'da esa `http://localhost:3001` ga yo'naltiriladi.
 - `docker compose logs frontend` dagi `proxy error` xabarlariga qarang.
 
 ### Docker build xatolari
