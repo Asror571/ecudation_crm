@@ -11,12 +11,32 @@ Start MongoDB and Redis with `docker compose up -d mongodb redis`, then run:
 ```bash
 cd backend
 npm ci
-npm run start:dev
+npm run start:local
 ```
 
 The backend reads the root `.env` and listens on `PORT` (default `3001` in the
-example). The local MongoDB URI uses `directConnection=true`; the replica set
-advertises its Docker DNS name, which is not resolvable by a host process.
+example). Keep `directConnection=true` in the host-side `MONGO_URI`; otherwise
+MongoDB redirects the host process to its Docker-only replica-set hostname.
+
+After MongoDB and Redis are running, create or reset the local demo login with:
+
+```bash
+npm run seed:demo
+npm run start:local
+```
+
+Open the frontend at the URL configured by `FRONTEND_PORT` in the root `.env`
+(default `http://localhost:5173`) and sign in with the demo account below.
+`start:local` and `seed:demo` ignore an inherited `MONGO_URI`, so the host
+process uses the MongoDB URI from the root `.env`.
+
+- Email: `local-demo-admin@education-crm.local`
+- Password: `DemoCrm2026!`
+
+The seed command is restricted to `NODE_ENV=development`. It creates a separate
+demo workspace and may be rerun to reset only this demo account's password. To
+use different local credentials, set `DEMO_ADMIN_EMAIL` and
+`DEMO_ADMIN_PASSWORD` in the root `.env` before running the seed command.
 
 ## Checks
 

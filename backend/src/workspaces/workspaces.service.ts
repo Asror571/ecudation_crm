@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Workspace, WorkspaceDocument } from './schemas/workspace.schema';
+import {
+  Workspace,
+  type WorkspaceDocument,
+} from './schemas/workspace.schema';
 
 @Injectable()
 export class WorkspacesService {
@@ -14,7 +17,7 @@ export class WorkspacesService {
     private workspaceModel: Model<WorkspaceDocument>,
   ) {}
 
-  async create(name: string, slug: string): Promise<Workspace> {
+  async create(name: string, slug: string): Promise<WorkspaceDocument> {
     const existingWorkspace = await this.workspaceModel
       .findOne({
         $or: [{ name }, { slug }],
@@ -31,19 +34,22 @@ export class WorkspacesService {
     return workspace.save();
   }
 
-  async findById(id: string): Promise<Workspace | null> {
+  async findById(id: string): Promise<WorkspaceDocument | null> {
     return this.workspaceModel.findById(id).exec();
   }
 
-  async findBySlug(slug: string): Promise<Workspace | null> {
+  async findBySlug(slug: string): Promise<WorkspaceDocument | null> {
     return this.workspaceModel.findOne({ slug }).exec();
   }
 
-  async findAll(): Promise<Workspace[]> {
+  async findAll(): Promise<WorkspaceDocument[]> {
     return this.workspaceModel.find().exec();
   }
 
-  async update(id: string, updateData: Partial<Workspace>): Promise<Workspace> {
+  async update(
+    id: string,
+    updateData: Partial<Workspace>,
+  ): Promise<WorkspaceDocument> {
     const workspace = await this.workspaceModel
       .findByIdAndUpdate(id, updateData, { new: true })
       .exec();
