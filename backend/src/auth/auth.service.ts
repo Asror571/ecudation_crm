@@ -49,7 +49,7 @@ export class AuthService {
       user: {
         id: user._id.toString(),
         email: user.email,
-        role: user.role,
+        roleId: user.roleId,
         workspaceId: user.workspaceId,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -119,7 +119,7 @@ export class AuthService {
     return {
       id: user._id.toString(),
       email: user.email,
-      role: user.role,
+      roleId: user.roleId,
       workspaceId: user.workspaceId,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -134,7 +134,7 @@ export class AuthService {
     const payload = {
       sub: user._id.toString(),
       email: user.email,
-      role: user.role,
+      roleId: user.roleId,
       workspaceId: user.workspaceId,
     };
 

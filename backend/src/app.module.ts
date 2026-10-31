@@ -11,6 +11,12 @@ import {
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { GroupsModule } from './groups/groups.module';
+import { RolesModule } from './roles/roles.module';
+import { PipelinesModule } from './pipelines/pipelines.module';
+import { FieldsModule } from './fields/fields.module';
+import { CatalogsModule } from './catalogs/catalogs.module';
+import { SettingsModule } from './settings/settings.module';
 import { workspacePlugin } from './common/plugins/workspace.plugin';
 
 @Module({
@@ -37,6 +43,12 @@ import { workspacePlugin } from './common/plugins/workspace.plugin';
     AuthModule,
     UsersModule,
     WorkspacesModule,
+    GroupsModule,
+    RolesModule,
+    PipelinesModule,
+    FieldsModule,
+    CatalogsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

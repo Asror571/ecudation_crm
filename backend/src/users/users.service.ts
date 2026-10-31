@@ -9,10 +9,16 @@ import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TenantContext } from '../common/tenant-context';
+import { GroupsService } from '../groups/groups.service';
+import { RolesService } from '../roles/roles.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private groupsService: GroupsService,
+    private rolesService: RolesService,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
     const existingUser = await TenantContext.runWithoutTenant(
@@ -22,6 +28,24 @@ export class UsersService {
 
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
+    }
+
+    const role = await this.rolesService.findById(
+      createUserDto.roleId,
+      createUserDto.workspaceId,
+    );
+
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+
+    if (createUserDto.groupIds && createUserDto.groupIds.length > 0) {
+      for (const groupId of createUserDto.groupIds) {
+        const group = await this.groupsService.findById(groupId, createUserDto.workspaceId);
+        if (!group) {
+          throw new NotFoundException(`Group ${groupId} not found`);
+        }
+      }
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);

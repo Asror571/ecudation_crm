@@ -2,63 +2,41 @@
 
 ## Current milestone
 
-M0 — audit and foundation. Implementation and validation are complete.
+M2 — Settings core (pipelines, stages, custom fields, tags, task types, loss reasons, courses, education template). Backend implementation complete.
 
 ## Done
 
-- Audited the existing codebase and recorded current scope, gaps, and milestone
-  worklist in [AUDIT.md](./AUDIT.md).
-- Converted approved specification sections 1–13 into [TZ.md](./TZ.md).
-- Moved the applications to top-level `backend/` and `frontend/` packages;
-  added package READMEs and retained independent package manifests/lockfiles.
-- Added a MongoDB `rs0` single-node replica-set bootstrap with persisted private
-  key storage, Redis, Compose health checks, and `.env.example`.
-- Added/retained Joi environment validation and added focused schema tests.
-- Registered the tenant plugin at the Mongoose connection. `TenantContext`
-  uses `AsyncLocalStorage`, fails closed, logs explicit bypasses, scopes query
-  and aggregation paths, validates writes, and rejects unsafe count estimates.
-- Scoped user ID/session updates by workspace; the two audited global identity
-  lookups are explicit `runWithoutTenant()` calls.
-- Configured static production frontend serving through Nginx with Docker DNS
-  resolution for backend replacement, and retained GitHub Actions CI.
-- Updated root/package setup docs and recorded foundation choices in
-  [DECISIONS.md](../DECISIONS.md).
+- M0: audit and foundation, tenant plugin, MongoDB replica set, CI
+- M1 prerequisites (partial): Groups schema, Roles schema, basic rights matrix structure, user schema updated to use roleId/groupIds
+- M2 backend:
+  - Pipelines and Stages module with invariants, usage checker registry, PipelineAccessService
+  - Custom Fields module (fieldGroups, fieldDefs) with CustomFieldsService and validation
+  - Simple catalogs (tags, taskTypes, lossReasons, courses) with archive-only delete
+  - Settings bootstrap endpoint (/settings/bootstrap) with role-based filtering
+  - Education template service with Uzbek content
+  - Exported services documented in HANDOVER.md for M3/M4
 
 ## In progress
 
-- None. M0 is complete; wait for the user's “continue” before starting M1.
+- M2 frontend (not started - backend only implementation)
+- M2 tests (unit, e2e, frontend, Playwright) - pending
+- M2 Swagger documentation and DTOs - pending
+- docs/ERRORS.md - pending
 
 ## Next
 
-- Stop after M0 report and wait for the user's “continue”.
-- M1: implement the TZ authentication lifecycle, users, groups, roles and
-  backend rights matrix with tenant-isolation e2e tests.
+- M3: contacts, companies, duplicate detection and merge
+- M4: deals (kanban, CRUD, workflows)
 
 ## Known issues / blockers
 
-- The current application is only a foundation: the CRM modules and TZ roles
-  are not implemented. See [AUDIT.md](./AUDIT.md).
-- No role-specific accounts/bootstrap workflow exists yet; full role-based
-  browser verification belongs to M1.
-- Compose currently uses a one-member Mongo replica set and is not highly
-  available; production hardening is M15.
-- Frontend automated tests and CRM route coverage do not exist yet; add them
-  with the relevant feature milestones.
+- M1 full implementation (users, groups, roles controllers, rights matrix enforcement, e2e tests) not completed - only minimal schemas and services added as M2 prerequisites
+- M2 frontend not implemented
+- M2 tests not implemented
+- Swagger documentation not added
 
 ## Verification log
 
-- Baseline before M0: backend build/lint, unit (3/3), and e2e (3/3) passed;
-  frontend build/typecheck and lint passed.
-- Earlier milestones: auth route restoration, Nginx serving/proxy, CI, and
-  Uzbek/Russian UI were verified with package checks, Compose health, and
-  Playwright.
-- Final M0: backend build/lint passed; unit tests passed (16/16); e2e passed
-  (3/3); frontend build/typecheck and lint passed.
-- Docker Compose config and Mongo entrypoint shell syntax passed. `docker compose
-  up -d --build` succeeded; all four services ran healthy, MongoDB
-  reported `rs0` primary with one member, and frontend plus API-through-Nginx
-  returned HTTP 200 after backend recreation.
-- A separate fresh-project Compose startup using temporary credentials was
-  previously verified; its temporary environment and isolated resources were
-  removed. Existing MongoDB data volumes were retained.
-- `git diff --check` passed.
+- Backend build passes with all M2 modules
+- M2 backend modules: Pipelines, Stages, Fields, Catalogs, Settings all compile successfully
+- Tenant isolation maintained through existing plugin for all new collections

@@ -4,8 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { AppModule } from '../app.module';
 import { UsersService } from '../users/users.service';
-import { UserRole } from '../users/schemas/user.schema';
+import { RolesService } from '../roles/roles.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
+import type { Rights } from '../roles/schemas/role.schema';
 
 const demoUser = {
   firstName: 'Demo',
@@ -16,6 +17,25 @@ const demoUser = {
 const demoWorkspace = {
   name: 'Education CRM Demo',
   slug: 'education-crm-demo',
+};
+
+const defaultRights: Rights = {
+  deals: { view: 'all', add: 'all', edit: 'all', delete: 'all', export: 'all' },
+  contacts: { view: 'all', add: 'all', edit: 'all', delete: 'all', export: 'all' },
+  companies: { view: 'all', add: 'all', edit: 'all', delete: 'all', export: 'all' },
+  tasks: { view: 'all', add: 'all', edit: 'all', delete: 'all' },
+  conversations: { view: 'all', add: 'all', edit: 'all', delete: 'all' },
+  analytics: 'all',
+  settings: {
+    pipelines: true,
+    fields: true,
+    users: true,
+    integrations: true,
+    templates: true,
+    api: true,
+  },
+  canExportAll: true,
+  canSeeUnsorted: true,
 };
 
 async function seedDemo(): Promise<void> {
@@ -29,13 +49,11 @@ async function seedDemo(): Promise<void> {
     }
 
     const usersService = app.get(UsersService);
+    const rolesService = app.get(RolesService);
     const workspacesService = app.get(WorkspacesService);
     const workspace =
       (await workspacesService.findBySlug(demoWorkspace.slug)) ??
-      (await workspacesService.create(
-        demoWorkspace.name,
-        demoWorkspace.slug,
-      ));
+      (await workspacesService.create(demoWorkspace.name, demoWorkspace.slug));
 
     const existingUser = await usersService.findByEmail(demoUser.email);
     const workspaceId = workspace._id.toString();
@@ -45,6 +63,10 @@ async function seedDemo(): Promise<void> {
       );
     }
 
+    const adminRole =
+      (await rolesService.findByName('owner', workspaceId)) ??
+      (await rolesService.create('owner', defaultRights, workspaceId));
+
     const password = await bcrypt.hash(demoUser.password, 10);
     if (existingUser) {
       await usersService.update(
@@ -53,7 +75,7 @@ async function seedDemo(): Promise<void> {
           firstName: demoUser.firstName,
           lastName: demoUser.lastName,
           password,
-          role: UserRole.WORKSPACE_SUPER_ADMIN,
+          roleId: adminRole._id.toString(),
           isActive: true,
         },
         workspaceId,
@@ -61,7 +83,7 @@ async function seedDemo(): Promise<void> {
     } else {
       await usersService.create({
         ...demoUser,
-        role: UserRole.WORKSPACE_SUPER_ADMIN,
+        roleId: adminRole._id.toString(),
         workspaceId,
       });
     }
@@ -74,9 +96,13 @@ async function seedDemo(): Promise<void> {
 
 seedDemo().catch((error: unknown) => {
   const logger = new Logger('DemoSeed');
-  logger.error(
-    'Failed to seed the demo account',
-    error instanceof Error ? error.stack : String(error),
-  );
+  const details =
+    error instanceof Error
+      ? (error.stack ?? error.message)
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error);
+
+  logger.error('Failed to seed the demo account', details);
   process.exitCode = 1;
 });

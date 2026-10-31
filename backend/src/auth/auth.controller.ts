@@ -14,16 +14,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { Response } from 'express';
-
-type CookieRequest = {
-  cookies?: {
-    refresh_token?: unknown;
-  };
-};
-
-type AuthenticatedRequest = {
-  user: { id: string; workspaceId: string };
-};
+import type { CookieRequest, AuthenticatedRequest } from './types';
 
 @Controller('auth')
 export class AuthController {
